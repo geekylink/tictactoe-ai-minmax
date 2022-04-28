@@ -1,6 +1,6 @@
 # Tictactoe min-max AI 0.0.1
 Testing out a min-max algo
-
+```
 USAGE:
     tictactoe-ai [FLAGS] [OPTIONS]
 
@@ -19,4 +19,4 @@ OPTIONS:
         --x-bad <x-bad>        How often should X choose a random move? (0 = never, 1 = 50%, 2 = 33%, etc)
         --x-depth <x-depth>    How deep will X search? (Default: infinite)
         --x-rand <x-rand>      How often should X choose a move just as good? (0 = never, 1 = 50%, 2 = 33%, etc)
-
+```
