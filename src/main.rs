@@ -122,11 +122,13 @@ impl Tictactoe {
             io::stdin()
                 .read_line(&mut my_move)
                 .expect("Failed to read move");
+
+            // Anything with a digit in first and third place is fine "1,2", "2-2", "0 1" etc
             if my_move.len() == 4 {
-                // Compiler says no support for chaining if lets as of April 2022: https://github.com/rust-lang/rust/issues/53667
-                if let Ok(x) = my_move[0..1].parse() {
-                    if let Ok(y) = my_move[2..3].parse() {
-                        if self.do_move(x, y) {
+                // Compiler says no support for chaining if lets, must be on own line as of April 2022: https://github.com/rust-lang/rust/issues/53667
+                if let Ok(x) = my_move[0..1].parse() { // first digit
+                    if let Ok(y) = my_move[2..3].parse() { // second digit
+                        if self.do_move(x, y) { // Only break if valid move
                             break;
                         }
                     }
@@ -190,7 +192,7 @@ impl Tictactoe {
     }
 
     fn min_max(&mut self, max_depth: i32, depth: i32, player_id: char, mut board: Tictactoe) -> (i8, Option<u8>) {
-        if board.check_for_win() { // End goal
+        if board.check_for_win() { // End goal, somebody won
             if board.turn == player_id {
                 return (1, None);
             }
@@ -200,37 +202,35 @@ impl Tictactoe {
         }
 
         let moves = board.get_available_moves();
-
         if moves.len() == 0 { // No moves left, so tie
             return (0, None);
         }
 
+        // Randomness controls how often to pick an equally good move
         let randomness = if self.turn == 'x' {
             self.x_rand
         } else {
             self.o_rand
         };
 
-        let mut max_score = -10; // Overwritten
+        let mut max_score = -10; // Overwritten, unless pruned
         let mut best_move = 99;
 
         if depth == max_depth {
             return (max_score, None);
         }
 
-        if depth > 8 {
-            panic!("Too deep man!");
-        }
-
         let mut rng = rand::thread_rng();
         for i in 0..moves.len() {
 
             let board = board.move_and_new_state(moves[i]);
+
             let next_player = if player_id == 'o' {
                 'x'
             } else {
                 'o'
             };
+
             let (score, next_move) = self.min_max(max_depth, depth+1, next_player, board);
 
             if score > max_score 
@@ -243,7 +243,6 @@ impl Tictactoe {
         (-1*max_score, Some(best_move.try_into().unwrap()))
     }
 
-    // max_depth = -1 = infinite/till stack overflows
     fn min_max_move(&mut self, max_depth: i32, player_id: char) {
        let (score, next_move) = self.min_max(max_depth, 0, player_id, Tictactoe::new_from(self));
        if !next_move.is_none() {
@@ -269,25 +268,17 @@ impl Tictactoe {
                 println!("It is Player {}'s turn", this_turn);
             }
 
+            // Is this an AI turn?
             if (this_turn == 'x' && self.x_ai) || (this_turn == 'o' && self.o_ai) {
 
-                let depth = if this_turn == 'x' {
-                    self.x_depth
+                let (depth, randomness, badness) = if this_turn == 'x' {
+                    (self.x_depth.into(),
+                    self.x_rand,
+                    self.x_bad)
                 } else {
-                    self.o_depth
-                }.into();
-
-                let randomness = if self.turn == 'x' {
-                    self.x_rand
-                } else {
-                    self.o_rand
-                };
-
-                // How often to choose a random move
-                let badness = if this_turn == 'x' {
-                    self.x_bad
-                } else {
-                    self.o_bad
+                    (self.o_depth.into(),
+                    self.o_rand,
+                    self.o_bad)
                 };
 
                 let mut rng = rand::thread_rng();
@@ -301,20 +292,22 @@ impl Tictactoe {
                 }
                 else {
                     self.min_max_move(depth, this_turn);
-
                 }
             }
-            else {
+            else { // Player turn, ask for move
                 self.ask_for_move();
             }
+
             if verbose {
                 self.draw_board();
             }
-            let is_win = self.check_for_win();
-            if is_win {
+
+            // End states, win or tie?
+            if self.check_for_win() {
                 println!("Player {} has won!", this_turn);
                 break;
             }
+
             if self.get_available_moves().len() == 0 {
                 println!("Tie!");
                 break;
